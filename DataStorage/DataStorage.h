@@ -23,6 +23,9 @@ protected:
 		return SS.str();
 	}
 
+
+	auto CompareNote() { return [](const auto& a, const auto& b) { return a < b; }; }
+
 	template<size_t Column> auto Compare() {
 		return [](const auto& a, const auto& b) { return get<Column>(a) < get<Column>(b); };
 	}
@@ -94,7 +97,7 @@ public:
 		return *this;
 	}
 
-	DataStore& AddNote(const initializer_list<tuple<Types...>>& note_list) {
+	DataStore& AddNote(const initializer_list<tuple<Types...>> note_list) {
 		for (const auto& s : note_list)
 			Unit.push_back(s);
 
@@ -102,12 +105,16 @@ public:
 	}
 
 	template<typename type>
-	DataStore& AddColumn(type Fill) {
+	DataStore<Types..., type> AddColumn(const type Fill) {
 		vector<tuple<Types..., type>> newUnit;
 		for (const auto& s : Unit)
 			newUnit.push_back(tuple_cat(s, make_tuple(Fill)));
 
-		return *this;
+		DataStore<Types..., type> newDataStore;
+		for (const auto& s : newUnit)
+			newDataStore.AddNote(s);
+
+		return newDataStore;
 	}
 
 
@@ -153,9 +160,19 @@ public:
 
 
 
+	DataStore& OrderBy() {
+		sort(Unit.begin(), Unit.end(), CompareNote());
+		return *this;
+	}
+
 	template<size_t Column>
 	DataStore& OrderBy() {
 		sort(Unit.begin(), Unit.end(), Compare<Column>());
+		return *this;
+	}
+
+	DataStore& OrderByDescending() {
+		sort(Unit.begin(), Unit.end(), [](const auto& a, const auto& b) { return a > b; });
 		return *this;
 	}
 
@@ -198,8 +215,7 @@ public:
 	}
 
 	DataStore& Repeat() {
-		auto compare = [](const auto& a, const auto& b) { return a < b; };
-		sort(Unit.begin(), Unit.end(), compare);
+		sort(Unit.begin(), Unit.end(), CompareNote());
 
 		set<tuple<Types...>> unique_unit;
 		for (int i = 0; i < Unit.size() - 1; i++)
@@ -249,11 +265,11 @@ public:
 		return *this;
 	}
 
-	constexpr bool Contains(tuple<Types...> found) {
+	constexpr bool Contains(const tuple<Types...> found) {
 		return find(Unit.begin(), Unit.end(), found) != Unit.end();
 	}
 
-	constexpr bool Contains(DataStore& variable_note, size_t index) {
+	constexpr bool Contains(DataStore& variable_note, const size_t index) {
 		return find(Unit.begin(), Unit.end(), variable_note[index]) != Unit.end();
 	}
 
