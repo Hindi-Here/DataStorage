@@ -30,9 +30,62 @@
 	auto& TopRankerList = UserStats.OrderBy<3>().Reverse().Take(5);
 			// получение пятерки лучших игроков
 
+        UserStats.Restore();
+
 	auto& MediumRankerTable = UserStats.Where<3>([](char rank) {return rank > 'A' && rank <= 'D'; });
 			// разбиение общей таблицы на подтаблицы
+
+        UserStats.Restore();
 
 	int LowPlayerTime = UserStats.ColumnToBox<3>().Min();
 			// получение данных о пользователе с наименьшим количеством часов
 ```
+#### Изменение структуры таблицы
+```C++
+	DataStore<int, int> SumTable = { {4,1}, {5,-2}, {10, 31} };
+
+	SumTable.AddNote({
+		{0,0}, {-11, 7}, {13, 2}
+		});
+
+	DataStore<int, int, int> TransformedTable =
+		SumTable.AddColumn(NULL)
+                        .ChangeColumn([&](tuple<int, int, int>& SUM) 
+                                 {return get<2>(SUM) = get<0>(SUM) + get<1>(SUM); });
+
+	cout << TransformedTable.GetColumn<2>();
+
+	SumTable.~DataStore();
+```
+## Перечень основных функций
+#### Получение данных
+- `LineCount()`, `ColumnCount()`
+- `First()`, `Last()`
+- `Contains(list param)`, `Contains(note from variable)`
+- `ColumnToBox()`, `ColumnToDeque()`, `ColumnToList()`, `ColumnToSet()`, `ColumnToVector()`
+- `GetLine<line>()`, `GetColumn<column>()`, `GetElement<line, column>()`
+- `GetType<column>()`
+#### Трансформация таблицы
+- `AddNote(list param)`, `AddColumn<column>(fill value)`
+- `ChangeNote<line>(list param)`, `ChangeNote<line>(note from variable)`, `ChangeElement<line, column>()`,
+- `ChangeColumn<column>(initializer_list or ColumnContainer)`, `ChangeColumn(lambda)`
+- `DeleteNote(index)`, `DeleteNote(list param)`, `DeleteNote(note from variable)`
+- `Restore()`
+- `Resize()`, `Clear()`
+- `Union()`
+#### Сортировка
+- `OrderBy()`, `OrderBy<column>()`
+- `OrderByDescending()`, `OrderByDexcending<column>()`
+- `Unique()`, `Unique<column>()`
+- `Repeat()`, `Repeat<column>()`
+- `Where(lambda)`, `Where_i(lambda)`
+- `Reverse()`
+- `Take(count or range)`
+#### Агрегатные функции ColumnContainer
+- `Sum()`
+- `Average()`
+- `Min()`, `Max()`
+- `Count()`
+- `Contains(list param)`
+- `Median()`
+- `Clear()`
