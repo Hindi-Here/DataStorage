@@ -16,6 +16,11 @@ public:
     ColumnContainer(const initializer_list<Type> array) : Unit(array) { }
     ~ColumnContainer() {}
 
+    typename vector<Type>::iterator begin() { return Unit.begin(); }
+    typename vector<Type>::iterator end() { return Unit.end(); }
+
+    Type& operator[](const size_t index) { return Unit[index]; }
+
     constexpr size_t Count() { return Unit.size(); }
 
     template<typename = enable_if_t<is_arithmetic_v<Type>>>

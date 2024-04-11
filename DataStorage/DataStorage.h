@@ -2,6 +2,7 @@
 #include <iostream>
 #include <tuple>
 #include <sstream>
+#include <functional>
 
 #include <list>
 #include <set>
@@ -13,6 +14,7 @@ template <class... Types>
 class DataStore {
 protected:
 	vector<tuple<Types...>> Unit;
+	vector<tuple<Types...>> Unit_save = Unit;
 
 	string _GetLine_(size_t line) {
 		stringstream SS;
@@ -38,7 +40,7 @@ public:
 
 	DataStore() {}
 	DataStore(const size_t size) : Unit(size) {}
-	DataStore(const Types... type) { Unit.push_back({ type... }); }
+	DataStore(const Types... type) { Unit.push_back({ type... });}
 	DataStore(const initializer_list<tuple<Types...>> type) : Unit(type) {}
 
 	~DataStore() {}
@@ -48,11 +50,12 @@ public:
 
 	tuple<Types...>& operator[](const size_t index) { return Unit[index]; }
 
-	size_t LineCount() { return Unit.size(); }
-	size_t ColumnCount() { return sizeof...(Types); }
+	constexpr size_t LineCount() { return Unit.size(); }
+	constexpr size_t ColumnCount() { return sizeof...(Types); }
 	DataStore& Resize(size_t size) { Unit.resize(size); return *this; }
 	DataStore& Reverse() { reverse(Unit.begin(), Unit.end()); return *this; }
-	void Clear() { Unit.clear(); }
+	DataStore& Restore() { Unit = Unit_save; return *this; }
+	constexpr void Clear() { Unit.clear(); }
 
 
 
@@ -143,18 +146,73 @@ public:
 		return *this;
 	}
 
+	template<size_t Column>
+	DataStore& ChangeColumn(initializer_list<decay_t<decltype(get<Column>(Unit[0]))>> list) {
+		vector<decay_t<decltype(get<Column>(Unit[0]))>> vector_array = list;
+		for (int i = 0; i < vector_array.size(); i++)
+			get<Column>(Unit[i]) = vector_array[i];
+
+		return *this;
+	}
+
+	template<size_t Column>
+	DataStore& ChangeColumn(ColumnContainer<decay_t<decltype(get<Column>(Unit[0]))>> variable_array) {
+		for (int i = 0; i < variable_array.Unit.size(); i++)
+			get<Column>(Unit[i]) = variable_array[i];
+
+		return *this;
+	}
+
+	DataStore& ChangeColumn(function<void(tuple<Types...>&)> change) {
+		for (auto& A : Unit)
+			change(A);
+
+		return  *this;
+	}
+
+	template<size_t Column>
+	DataStore& ChangeColumn(function<void(decay_t<decltype(get<Column>(Unit[0]))>&)> change) {
+		for (auto& A : Unit)
+			change(get<Column>(A));
+
+		return  *this;
+	}
+
 
 
 	template<size_t Line>
 	DataStore& DeleteNote() {
 		Unit.erase(Unit.begin() + Line);
-
 		return *this;
 	}
 
 	DataStore& DeleteNote(const size_t index) {
 		Unit.erase(Unit.begin() + index);
+		return *this;
+	}
 
+	DataStore& DeleteNote(const Types... note) {
+		Unit.erase(remove_if(Unit.begin(), Unit.end(), [&](const auto& a) {
+			return a == make_tuple(note...);
+			}), Unit.end());
+
+		return *this;
+	}
+
+	DataStore& DeleteNote(DataStore& variable_note) {
+		Unit.erase(remove_if(Unit.begin(), Unit.end(), [&](const tuple<Types...>& a) {
+			for (int j = 0; j < variable_note.LineCount(); j++) 
+				if (a == variable_note.Unit[j]) 
+					return true;		
+			
+			return false;
+			}), Unit.end());
+
+		return *this;
+	}
+
+	DataStore& DeleteNote(DataStore& variable_note, const size_t index) {
+		Unit.erase(remove(Unit.begin(), Unit.end(), variable_note.Unit[index]), Unit.end());
 		return *this;
 	}
 
@@ -263,6 +321,32 @@ public:
 			Unit.push_back(newUnit[i]);
 
 		return *this;
+	}
+
+	DataStore& Where(function<bool(tuple<Types...>&)> sorted) {
+		Unit.erase(remove_if(Unit.begin(), Unit.end(), [&](tuple<Types...>& A) {
+			return !sorted(A);
+			}), Unit.end());
+
+		return *this;
+	}
+
+	template<size_t Column>
+	DataStore& Where(function<bool(decay_t<decltype(get<Column>(Unit[0]))>)> sorted) {
+		Unit.erase(remove_if(Unit.begin(), Unit.end(), [&](tuple<Types...>& A) {
+			return !sorted(get<Column>(A));
+			}), Unit.end());
+
+		return *this;
+	}
+
+	DataStore& Where_i(function<bool(tuple<Types...>&)> sorted) {
+		return Where([&](tuple<Types...>& A) { return !sorted(A); });
+	}
+
+	template<size_t Column>
+	DataStore& Where_i(function<bool(decay_t<decltype(get<Column>(Unit[0]))>)> sorted) {
+		return Where([&](tuple<Types...>& A) { return !sorted(get<Column>(A)); });
 	}
 
 	constexpr bool Contains(const tuple<Types...> found) {
