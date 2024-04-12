@@ -13,8 +13,7 @@
 template <class... Types>
 class DataStore {
 protected:
-	vector<tuple<Types...>> Unit;
-	vector<tuple<Types...>> Unit_save = Unit;
+	vector<tuple<Types...>> Unit, Unit_save = Unit;
 
 	string _GetLine_(size_t line) {
 		stringstream SS;
@@ -40,7 +39,7 @@ public:
 
 	DataStore() {}
 	DataStore(const size_t size) : Unit(size) {}
-	DataStore(const Types... type) { Unit.push_back({ type... });}
+	DataStore(const Types... type) { Unit.push_back({ type... }); }
 	DataStore(const initializer_list<tuple<Types...>> type) : Unit(type) {}
 
 	~DataStore() {}
@@ -52,9 +51,10 @@ public:
 
 	constexpr size_t LineCount() { return Unit.size(); }
 	constexpr size_t ColumnCount() { return sizeof...(Types); }
+	DataStore& Remember() { Unit_save = Unit; return *this; }
 	DataStore& Resize(size_t size) { Unit.resize(size); return *this; }
-	DataStore& Reverse() { reverse(Unit.begin(), Unit.end()); return *this; }
 	DataStore& Restore() { Unit = Unit_save; return *this; }
+	DataStore& Reverse() { reverse(Unit.begin(), Unit.end()); return *this; }
 	constexpr void Clear() { Unit.clear(); }
 
 
@@ -201,10 +201,10 @@ public:
 
 	DataStore& DeleteNote(DataStore& variable_note) {
 		Unit.erase(remove_if(Unit.begin(), Unit.end(), [&](const tuple<Types...>& a) {
-			for (int j = 0; j < variable_note.LineCount(); j++) 
-				if (a == variable_note.Unit[j]) 
-					return true;		
-			
+			for (int j = 0; j < variable_note.LineCount(); j++)
+				if (a == variable_note.Unit[j])
+					return true;
+
 			return false;
 			}), Unit.end());
 
