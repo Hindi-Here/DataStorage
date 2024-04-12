@@ -27,17 +27,15 @@
                             /* ... */
 	};
 
-	auto& TopRankerList = UserStats.OrderBy<3>().Reverse().Take(5);
+	auto TopRankerList = UserStats.OrderBy<3>().Reverse().Take(5);
 			// получение пятерки лучших игроков
 
-        UserStats.Restore();
+        UserStats.Restore(); // восстановление исходной таблицы
 
-	auto& MediumRankerTable = UserStats.Where<3>([](char rank) {return rank > 'A' && rank <= 'D'; });
+	auto MediumRankerTable = UserStats.Where<3>([](char rank) {return rank > 'A' && rank <= 'D'; });
 			// разбиение общей таблицы на подтаблицы
 
-        UserStats.Restore();
-
-	int LowPlayerTime = UserStats.ColumnToBox<3>().Min();
+	int LowPlayerTime = UserStats.Restore().ColumnToBox<2>().Min();
 			// получение данных о пользователе с наименьшим количеством часов
 ```
 #### Изменение структуры таблицы
