@@ -44,7 +44,7 @@
 
 	SumTable.AddNote({
 		{0,0}, {-11, 7}, {13, 2}
-		});
+		}).Remember();
 
 	DataStore<int, int, int> TransformedTable =
 		SumTable.AddColumn(NULL)
