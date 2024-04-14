@@ -25,7 +25,7 @@ public:
 
     template<typename = enable_if_t<is_arithmetic_v<Type>>>
     constexpr double Sum() {
-        static double sum;
+        double sum = 0;
         for (const auto& s : Unit)
             sum += s;
 
@@ -34,7 +34,7 @@ public:
 
     template<typename = enable_if_t<is_arithmetic_v<Type>>>
     constexpr double Average() {
-        static double avg;
+        double avg = 0;
         for (const auto& s : Unit)
             avg += s;
 
@@ -72,6 +72,20 @@ public:
                     return true;
 
         return false;
+    }
+
+    constexpr int ContainsCount(const Type found) {
+        return (int)count(Unit.begin(), Unit.end(), found);
+    }
+
+    constexpr int ContainsCount(const initializer_list<Type> found_list) {
+        int count = 0;
+        for (int i = 0; i < Unit.size(); i++)
+            for (int j = 0; j < found_list.size(); j++)
+                if (Unit[i] == *(found_list.begin() + j))
+                    count++;
+
+        return count;
     }
 
 };

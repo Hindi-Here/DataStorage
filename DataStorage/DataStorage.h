@@ -62,6 +62,11 @@ public:
 	template<size_t Line, size_t Column>
 	constexpr auto GetElement() { return get<Column>(Unit[Line]); }
 
+	template<size_t Column>
+	constexpr auto GetElement(const auto& param) {
+		return get<Column>(param);
+	}
+
 	constexpr string First() { return _GetLine_(0); }
 	constexpr string Last() { return _GetLine_(Unit.size() - 1); }
 
@@ -349,8 +354,42 @@ public:
 		return Where([&](tuple<Types...>& A) { return !sorted(get<Column>(A)); });
 	}
 
+	template<typename... AnotherTypes>
+	DataStore<Types..., AnotherTypes...> Join(DataStore<AnotherTypes...> variable_note) {
+
+		vector<tuple<AnotherTypes...>> newVector;
+		for (const auto& s : variable_note)
+			newVector.push_back(s);
+
+		size_t maxIndex = max(Unit.size(), newVector.size());
+		Unit.resize(maxIndex); newVector.resize(maxIndex);
+
+		vector<tuple<Types..., AnotherTypes...>> newVector2;
+
+		transform(Unit.begin(), Unit.end(), newVector.begin(), back_inserter(newVector2),
+			[](const auto& A, const auto& B) {
+				return tuple_cat(A, B);
+			});
+
+		DataStore<Types..., AnotherTypes...> newDataStore;
+		for (const auto& s : newVector2)
+			newDataStore.AddNote(s);
+
+		return newDataStore;
+	}
+
 	constexpr bool Contains(const tuple<Types...> found) {
 		return find(Unit.begin(), Unit.end(), found) != Unit.end();
+	}
+
+	constexpr bool Contains(const initializer_list<tuple<Types...>> found_list) {
+		vector<tuple<Types...>> foundList = found_list;
+		for (int i = 0; i < Unit.size(); i++)
+			for (int j = 0; j < foundList.size(); j++)
+				if (Unit[i] == foundList[j])
+					return true;
+
+		return false;
 	}
 
 	constexpr bool Contains(DataStore& variable_note, const size_t index) {
@@ -365,6 +404,35 @@ public:
 
 		return false;
 	}
+
+	constexpr int ContainsCount(const tuple<Types...> found) {
+		return (int)count(Unit.begin(), Unit.end(), found);
+	}
+
+	constexpr int ContainsCount(const initializer_list<tuple<Types...>> found_list) {
+		vector<tuple<Types...>> foundList = found_list; int count = 0;
+		for (int i = 0; i < Unit.size(); i++)
+			for (int j = 0; j < foundList.size(); j++)
+				if (Unit[i] == foundList[j])
+					count++;
+
+		return count;
+	}
+
+	constexpr int ContainsCount(DataStore& variable_note, const size_t index) {
+		return (int)count(Unit.begin(), Unit.end(), variable_note[index]);
+	}
+
+	constexpr int ContainsCount(DataStore& variable_note) {
+		int count = 0;
+		for (int i = 0; i < Unit.size(); i++)
+			for (int j = 0; j < variable_note.Unit.size(); j++)
+				if (Unit[i] == variable_note.Unit[j])
+					count++;
+
+		return count;
+	}
+
 
 
 	template<size_t Column>
