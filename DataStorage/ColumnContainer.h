@@ -4,88 +4,71 @@
 #include <vector>
 #include <initializer_list>
 
+using namespace std;
+
 template<class Type>
 class ColumnContainer {
-protected:
-    vector<Type> Unit;
-    void Add(const Type param) { Unit.push_back(param); }
-    template <class... Types> friend class DataStore;
+private:
+	vector<Type> Unit;
+	void Add(const Type param) { Unit.push_back(param); }
+	template <class... Types> friend class DataStore;
+	using if_t = enable_if_t<is_arithmetic_v<Type>>;
+
 public:
+	ColumnContainer() = default;
+	constexpr ColumnContainer(const initializer_list<Type>& array) : Unit(array) {}
+	~ColumnContainer() = default;
 
-    ColumnContainer() {}
-    ColumnContainer(const initializer_list<Type> array) : Unit(array) { }
-    ~ColumnContainer() {}
+	constexpr size_t Count() const { return Unit.size(); }
 
-    typename vector<Type>::iterator begin() { return Unit.begin(); }
-    typename vector<Type>::iterator end() { return Unit.end(); }
+	template<typename = if_t>
+	constexpr double Sum() const {
+		double sum = 0;
+		for (const auto& s : Unit)
+			sum += s;
 
-    Type& operator[](const size_t index) { return Unit[index]; }
+		return sum;
+	}
 
-    constexpr size_t Count() { return Unit.size(); }
+	template<typename = if_t>
+	constexpr double Average() {
+		double avg = 0;
+		for (const auto& s : Unit)
+			avg += s;
 
-    template<typename = enable_if_t<is_arithmetic_v<Type>>>
-    constexpr double Sum() {
-        double sum = 0;
-        for (const auto& s : Unit)
-            sum += s;
+		return avg / Unit.size();
+	}
 
-        return sum;
-    }
+	constexpr Type Max() const {
+		return *max_element(Unit.begin(), Unit.end());
+	}
 
-    template<typename = enable_if_t<is_arithmetic_v<Type>>>
-    constexpr double Average() {
-        double avg = 0;
-        for (const auto& s : Unit)
-            avg += s;
+	constexpr Type Min() const {
+		return *min_element(Unit.begin(), Unit.end());
+	}
 
-        return avg / Unit.size();
-    }
+	constexpr Type Median() const {
+		return Unit[Unit.size() / 2];
+	}
 
-    constexpr Type Max() {
-        static Type max = Unit[0];
-        for (const Type& s : Unit)
-            if (max < s) max = s;
+	constexpr bool Contains(const Type found) const {
+		return find(Unit.begin(), Unit.end(), found) != Unit.end();
+	}
 
-        return max;
-    }
+	constexpr bool Contains(const initializer_list<Type>& found_list) const {
+		return std::any_of(found_list.begin(), found_list.end(),
+			[this](const Type& found) { return Contains(found); });
+	}
 
-    constexpr Type Min() {
-        static Type min = Unit[0];
-        for (const Type& s : Unit)
-            if (min > s) min = s;
+	constexpr int ContainsCount(const Type found) const {
+		return count(Unit.begin(), Unit.end(), found);
+	}
 
-        return min;
-    }
+	constexpr int ContainsCount(const initializer_list<Type>& found_list) const {
+		int count = 0;
+		for (const auto& s : found_list)
+			count += ContainsCount(s);
 
-    constexpr Type Median() { return Unit[Unit.size() / 2]; }
-
-    constexpr void Clear() { Unit.clear(); }
-
-    constexpr bool Contains(const Type found) {
-        return find(Unit.begin(), Unit.end(), found) != Unit.end();
-    }
-
-    constexpr bool Contains(const initializer_list<Type> found_list) {
-        for (int i = 0; i < Unit.size(); i++)
-            for (int j = 0; j < found_list.size(); j++)
-                if (Unit[i] == *(found_list.begin() + j))
-                    return true;
-
-        return false;
-    }
-
-    constexpr int ContainsCount(const Type found) {
-        return (int)count(Unit.begin(), Unit.end(), found);
-    }
-
-    constexpr int ContainsCount(const initializer_list<Type> found_list) {
-        int count = 0;
-        for (int i = 0; i < Unit.size(); i++)
-            for (int j = 0; j < found_list.size(); j++)
-                if (Unit[i] == *(found_list.begin() + j))
-                    count++;
-
-        return count;
-    }
-
+		return count;
+	}
 };

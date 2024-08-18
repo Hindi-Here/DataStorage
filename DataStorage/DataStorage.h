@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <tuple>
 #include <sstream>
 #include <functional>
@@ -10,12 +9,15 @@
 
 #include "ColumnContainer.h"
 
+using namespace std;
+
 template <class... Types>
 class DataStore {
 protected:
-	vector<tuple<Types...>> Unit, Unit_save = Unit;
+	vector<tuple<Types...>> Unit;
+	vector<tuple<Types...>> Unit_save = Unit;
 
-	string _GetLine_(size_t line) {
+	string GetLine_(size_t line) {
 		stringstream SS;
 		apply([&SS](const auto&... args) {
 			((SS << args << ' '), ...);
@@ -24,25 +26,28 @@ protected:
 		return SS.str();
 	}
 
+	static auto CompareNote() { return [](const auto& a, const auto& b) { return a < b; }; }
 
-	auto CompareNote() { return [](const auto& a, const auto& b) { return a < b; }; }
-
-	template<size_t Column> auto Compare() {
+	template<size_t Column>
+	auto Compare() const
+	{
 		return [](const auto& a, const auto& b) { return get<Column>(a) < get<Column>(b); };
 	}
 
-	template<size_t Column> auto Equals_Compare() {
+	template<size_t Column>
+	auto Equals_Compare() const
+	{
 		return [](const auto& a, const auto& b) { return get<Column>(a) == get<Column>(b); };
 	}
 
 public:
 
-	DataStore() {}
+	DataStore() = default;
 	DataStore(const size_t size) : Unit(size) {}
 	DataStore(const Types... type) { Unit.push_back({ type... }); }
-	DataStore(const initializer_list<tuple<Types...>> type) : Unit(type) {}
+	DataStore(const initializer_list<tuple<Types...>>& type) : Unit(type) {}
 
-	~DataStore() {}
+	~DataStore() = default;
 
 	typename vector<tuple<Types...>>::iterator begin() { return Unit.begin(); }
 	typename vector<tuple<Types...>>::iterator end() { return Unit.end(); }
@@ -50,29 +55,22 @@ public:
 	tuple<Types...>& operator[](const size_t index) { return Unit[index]; }
 
 	constexpr size_t LineCount() { return Unit.size(); }
-	constexpr size_t ColumnCount() { return sizeof...(Types); }
+	static constexpr size_t ColumnCount() { return sizeof...(Types); }
 	DataStore& Remember() { Unit_save = Unit; return *this; }
 	DataStore& Resize(size_t size) { Unit.resize(size); return *this; }
-	DataStore& Restore() { Unit = Unit_save; return *this; }
 	DataStore& Reverse() { reverse(Unit.begin(), Unit.end()); return *this; }
+	DataStore& Restore() { Unit = Unit_save; return *this; }
 	constexpr void Clear() { Unit.clear(); }
-
-
 
 	template<size_t Line, size_t Column>
 	constexpr auto GetElement() { return get<Column>(Unit[Line]); }
 
-	template<size_t Column>
-	constexpr auto GetElement(const auto& param) {
-		return get<Column>(param);
-	}
-
-	constexpr string First() { return _GetLine_(0); }
+	constexpr string First() { return GetLine_(0); }
 	constexpr string Last() { return _GetLine_(Unit.size() - 1); }
 
 	template<size_t Line>
 	constexpr string GetLine() {
-		return _GetLine_(Line);
+		return GetLine_(Line);
 	}
 
 	template<size_t Column>
@@ -93,8 +91,6 @@ public:
 		return type;
 	}
 
-
-
 	DataStore& AddNote(const Types... note) {
 		Unit.push_back({ note... });
 		return *this;
@@ -105,7 +101,7 @@ public:
 		return *this;
 	}
 
-	DataStore& AddNote(const initializer_list<tuple<Types...>> note_list) {
+	DataStore& AddNote(const initializer_list<tuple<Types...>>& note_list) {
 		for (const auto& s : note_list)
 			Unit.push_back(s);
 
@@ -125,11 +121,9 @@ public:
 		return newDataStore;
 	}
 
-
-
 	template<size_t Line, size_t Column>
 	DataStore& ChangeElement(const auto& notePart) {
-		get<Column>(Unit[Line]) = notePart;
+		get<Column>(this->Unit[Line]) = notePart;
 		return *this;
 	}
 
@@ -155,7 +149,15 @@ public:
 	DataStore& ChangeColumn(initializer_list<decay_t<decltype(get<Column>(Unit[0]))>> list) {
 		vector<decay_t<decltype(get<Column>(Unit[0]))>> vector_array = list;
 		for (int i = 0; i < vector_array.size(); i++)
-			get<Column>(Unit[i]) = vector_array[i];
+			get<Column>(this->Unit[i]) = vector_array[i];
+
+		return *this;
+	}
+
+	template<size_t Column>
+	DataStore& ChangeColumn(vector<decay_t<decltype(get<Column>(Unit[0]))>> list) {
+		for (int i = 0; i < list.size(); i++)
+			get<Column>(this->Unit[i]) = list[i];
 
 		return *this;
 	}
@@ -163,7 +165,7 @@ public:
 	template<size_t Column>
 	DataStore& ChangeColumn(ColumnContainer<decay_t<decltype(get<Column>(Unit[0]))>> variable_array) {
 		for (int i = 0; i < variable_array.Unit.size(); i++)
-			get<Column>(Unit[i]) = variable_array[i];
+			get<Column>(this->Unit[i]) = variable_array[i];
 
 		return *this;
 	}
@@ -182,8 +184,6 @@ public:
 
 		return  *this;
 	}
-
-
 
 	template<size_t Line>
 	DataStore& DeleteNote() {
@@ -220,8 +220,6 @@ public:
 		Unit.erase(remove(Unit.begin(), Unit.end(), variable_note.Unit[index]), Unit.end());
 		return *this;
 	}
-
-
 
 	DataStore& OrderBy() {
 		sort(Unit.begin(), Unit.end(), CompareNote());
@@ -346,17 +344,16 @@ public:
 	}
 
 	DataStore& Where_i(function<bool(tuple<Types...>&)> sorted) {
-		return Where([&](tuple<Types...>& A) { return !sorted(A); });
+		return Where([sorted](tuple<Types...>& A) { return !sorted(A); });
 	}
 
 	template<size_t Column>
 	DataStore& Where_i(function<bool(decay_t<decltype(get<Column>(Unit[0]))>)> sorted) {
-		return Where([&](tuple<Types...>& A) { return !sorted(get<Column>(A)); });
+		return Where([sorted](tuple<Types...>& A) { return !sorted(get<Column>(A)); });
 	}
 
 	template<typename... AnotherTypes>
 	DataStore<Types..., AnotherTypes...> Join(DataStore<AnotherTypes...> variable_note) {
-
 		vector<tuple<AnotherTypes...>> newVector;
 		for (const auto& s : variable_note)
 			newVector.push_back(s);
@@ -382,7 +379,7 @@ public:
 		return find(Unit.begin(), Unit.end(), found) != Unit.end();
 	}
 
-	constexpr bool Contains(const initializer_list<tuple<Types...>> found_list) {
+	constexpr bool Contains(const initializer_list<tuple<Types...>>& found_list) {
 		vector<tuple<Types...>> foundList = found_list;
 		for (int i = 0; i < Unit.size(); i++)
 			for (int j = 0; j < foundList.size(); j++)
@@ -406,10 +403,10 @@ public:
 	}
 
 	constexpr int ContainsCount(const tuple<Types...> found) {
-		return (int)count(Unit.begin(), Unit.end(), found);
+		return static_cast<int>(count(Unit.begin(), Unit.end(), found));
 	}
 
-	constexpr int ContainsCount(const initializer_list<tuple<Types...>> found_list) {
+	constexpr int ContainsCount(const initializer_list<tuple<Types...>>& found_list) {
 		vector<tuple<Types...>> foundList = found_list; int count = 0;
 		for (int i = 0; i < Unit.size(); i++)
 			for (int j = 0; j < foundList.size(); j++)
@@ -420,7 +417,7 @@ public:
 	}
 
 	constexpr int ContainsCount(DataStore& variable_note, const size_t index) {
-		return (int)count(Unit.begin(), Unit.end(), variable_note[index]);
+		return static_cast<int>(count(Unit.begin(), Unit.end(), variable_note[index]));
 	}
 
 	constexpr int ContainsCount(DataStore& variable_note) {
@@ -433,8 +430,6 @@ public:
 		return count;
 	}
 
-
-
 	template<size_t Column>
 	constexpr vector <decay_t<decltype(get<Column>(Unit[0]))>> ColumnToVector() {
 		vector<decay_t<decltype(get<Column>(Unit[0]))>> arr;
@@ -445,21 +440,21 @@ public:
 	}
 
 	template<size_t Column>
-	constexpr list<decay_t<decltype(get<Column>(Unit[0]))>> ColumnToList() {
-		list<decay_t<decltype(get<Column>(Unit[0]))>> arr;
+	constexpr std::list<decay_t<decltype(get<Column>(Unit[0]))>> ColumnToList() {
+		vector<decay_t<decltype(get<Column>(Unit[0]))>> tempArr;
 		for (const auto& S : Unit)
-			arr.push_back(get<Column>(S));
+			tempArr.push_back(get<Column>(S));
 
-		return arr;
+		return list<decay_t<decltype(get<Column>(Unit[0]))>>(tempArr.begin(), tempArr.end());
 	}
 
 	template<size_t Column>
 	constexpr deque<decay_t<decltype(get<Column>(Unit[0]))>> ColumnToDeque() {
-		deque<decay_t<decltype(get<Column>(Unit[0]))>> arr;
+		vector<decay_t<decltype(get<Column>(Unit[0]))>> tempArr;
 		for (const auto& S : Unit)
-			arr.push_back(get<Column>(S));
+			tempArr.push_back(get<Column>(S));
 
-		return arr;
+		return deque<decay_t<decltype(get<Column>(Unit[0]))>>(tempArr.begin(), tempArr.end());
 	}
 
 	template<size_t Column>
@@ -479,5 +474,4 @@ public:
 
 		return arr;
 	}
-
 };
