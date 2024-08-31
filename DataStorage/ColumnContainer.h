@@ -12,16 +12,15 @@ private:
 	vector<Type> Unit;
 	void Add(const Type param) { Unit.push_back(param); }
 	template <class... Types> friend class DataStore;
-	using if_t = enable_if_t<is_arithmetic_v<Type>>;
 
 public:
 	ColumnContainer() = default;
 	constexpr ColumnContainer(const initializer_list<Type>& array) : Unit(array) {}
+	constexpr ColumnContainer(const vector<Type>& array) : Unit(array) {}
 	~ColumnContainer() = default;
 
 	constexpr size_t Count() const { return Unit.size(); }
 
-	template<typename = if_t>
 	constexpr double Sum() const {
 		double sum = 0;
 		for (const auto& s : Unit)
@@ -30,7 +29,6 @@ public:
 		return sum;
 	}
 
-	template<typename = if_t>
 	constexpr double Average() {
 		double avg = 0;
 		for (const auto& s : Unit)
